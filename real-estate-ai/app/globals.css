@@ -1,0 +1,46 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html {
+  direction: rtl;
+}
+
+body {
+  @apply bg-slate-50 text-slate-800;
+}
+
+/* טבלאות עם כיווניות עברית */
+table {
+  text-align: right;
+}
+
+/* רכיבים משותפים */
+.btn {
+  @apply inline-flex items-center justify-center gap-1 rounded-lg px-3 py-2 text-sm font-medium transition;
+}
+.btn-primary {
+  @apply btn bg-brand text-white hover:bg-brand-dark;
+}
+.btn-ghost {
+  @apply btn border border-slate-300 bg-white text-slate-700 hover:bg-slate-100;
+}
+.btn-danger {
+  @apply btn bg-red-600 text-white hover:bg-red-700;
+}
+.card {
+  @apply rounded-xl border border-slate-200 bg-white p-4 shadow-sm;
+}
+.input {
+  @apply w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand;
+}
+.label {
+  @apply mb-1 block text-sm font-medium text-slate-600;
+}
+.badge {
+  @apply inline-block rounded-full px-2 py-0.5 text-xs font-medium;
+}
