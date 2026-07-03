@@ -51,7 +51,10 @@ export default function ListingsPage() {
           <tbody>
             {listings.map((l) => (
               <tr key={l.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
-                <Td>{l.address}</Td>
+                <Td>
+                  {l.address}
+                  {l.images.length > 0 && <span className="mr-1 text-xs text-slate-400">📷 {l.images.length}</span>}
+                </Td>
                 <Td>{l.rooms}</Td>
                 <Td>{l.area_sqm}</Td>
                 <Td>{formatPrice(l.price)}</Td>
@@ -113,8 +116,33 @@ function ListingForm({ listing, onClose, onSaved }: { listing: Listing | null; o
     owner: listing?.owner ?? '',
     lead_source: listing?.lead_source ?? '',
     description: listing?.description ?? '',
+    images: listing?.images ?? ([] as string[]),
   });
   const [error, setError] = useState('');
+  const [uploading, setUploading] = useState(false);
+
+  // העלאת תמונות ל-/api/uploads והוספת הנתיבים לרשימה
+  async function onFiles(files: FileList | null) {
+    if (!files || files.length === 0) return;
+    setUploading(true);
+    setError('');
+    try {
+      const paths: string[] = [];
+      for (const file of Array.from(files)) {
+        const fd = new FormData();
+        fd.append('file', file);
+        const res = await fetch('/api/uploads', { method: 'POST', body: fd });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'העלאה נכשלה');
+        paths.push(data.path);
+      }
+      setForm((f) => ({ ...f, images: [...f.images, ...paths] }));
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setUploading(false);
+    }
+  }
 
   const save = useMutation({
     mutationFn: () =>
@@ -150,6 +178,26 @@ function ListingForm({ listing, onClose, onSaved }: { listing: Listing | null; o
         </div>
         <div><label className="label">בעלים</label><input className="input" value={form.owner ?? ''} onChange={(e) => set('owner', e.target.value)} /></div>
         <div><label className="label">תיאור</label><textarea className="input" rows={3} value={form.description ?? ''} onChange={(e) => set('description', e.target.value)} /></div>
+        <div>
+          <label className="label">תמונות</label>
+          {form.images.length > 0 && (
+            <div className="mb-2 flex flex-wrap gap-2">
+              {form.images.map((src) => (
+                <div key={src} className="relative">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={src} alt="" className="h-16 w-16 rounded-lg object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => set('images', form.images.filter((i) => i !== src))}
+                    className="absolute -left-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-xs text-white"
+                  >✕</button>
+                </div>
+              ))}
+            </div>
+          )}
+          <input type="file" accept="image/*" multiple onChange={(e) => onFiles(e.target.files)} className="text-sm" />
+          {uploading && <span className="mr-2 text-sm text-slate-400">מעלה…</span>}
+        </div>
         {error && <p className="text-sm text-red-600">{error}</p>}
         <div className="flex justify-end gap-2 pt-2">
           <button className="btn-ghost" onClick={onClose}>ביטול</button>

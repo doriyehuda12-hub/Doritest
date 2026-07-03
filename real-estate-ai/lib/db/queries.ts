@@ -225,3 +225,7 @@ export function addFollowUp(leadId: number, dueDate: string, note?: string): Fol
 export function completeFollowUp(id: number): void {
   getDb().prepare('UPDATE follow_ups SET done = 1 WHERE id = ?').run(id);
 }
+
+export function deleteFollowUp(id: number): void {
+  getDb().prepare('DELETE FROM follow_ups WHERE id = ?').run(id);
+}

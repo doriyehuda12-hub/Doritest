@@ -66,6 +66,7 @@ function LeadPanel({ leadId, onEdit, onDeleted }: { leadId: number; onEdit: (l: 
   const qc = useQueryClient();
   const { data } = useQuery({ queryKey: ['lead', leadId], queryFn: () => apiGet<LeadDetail>(`/api/leads/${leadId}`) });
   const [newInter, setNewInter] = useState({ type: 'שיחה', content: '' });
+  const [newFu, setNewFu] = useState({ due_date: '', note: '' });
 
   const refresh = () => qc.invalidateQueries({ queryKey: ['lead', leadId] });
 
@@ -85,9 +86,21 @@ function LeadPanel({ leadId, onEdit, onDeleted }: { leadId: number; onEdit: (l: 
     mutationFn: () => apiSend(`/api/leads/${leadId}`, 'DELETE'),
     onSuccess: onDeleted,
   });
+  const addFu = useMutation({
+    mutationFn: () => apiSend(`/api/leads/${leadId}/followups`, 'POST', newFu),
+    onSuccess: () => { setNewFu({ due_date: '', note: '' }); refresh(); qc.invalidateQueries({ queryKey: ['stats'] }); },
+  });
+  const doneFu = useMutation({
+    mutationFn: (fid: number) => apiSend(`/api/followups/${fid}`, 'PATCH'),
+    onSuccess: () => { refresh(); qc.invalidateQueries({ queryKey: ['stats'] }); },
+  });
+  const delFu = useMutation({
+    mutationFn: (fid: number) => apiSend(`/api/followups/${fid}`, 'DELETE'),
+    onSuccess: () => { refresh(); qc.invalidateQueries({ queryKey: ['stats'] }); },
+  });
 
   if (!data) return <div className="card">טוען…</div>;
-  const { lead, interactions, matches } = data;
+  const { lead, interactions, matches, followUps } = data;
 
   return (
     <div className="space-y-4">
@@ -144,6 +157,34 @@ function LeadPanel({ leadId, onEdit, onDeleted }: { leadId: number; onEdit: (l: 
             ))}
           </div>
         )}
+      </div>
+
+      <div className="card">
+        <h3 className="mb-3 font-bold">⏰ תזכורות מעקב</h3>
+        <div className="mb-3 flex gap-2">
+          <input type="date" className="input w-40" value={newFu.due_date} onChange={(e) => setNewFu((s) => ({ ...s, due_date: e.target.value }))} />
+          <input className="input flex-1" placeholder="תיאור התזכורת…" value={newFu.note} onChange={(e) => setNewFu((s) => ({ ...s, note: e.target.value }))} />
+          <button className="btn-primary" disabled={!newFu.due_date || addFu.isPending} onClick={() => addFu.mutate()}>הוסף</button>
+        </div>
+        <div className="space-y-2">
+          {followUps.map((f) => {
+            const overdue = !f.done && new Date(f.due_date) < new Date();
+            return (
+              <div key={f.id} className={`flex items-center justify-between rounded-lg border p-2 text-sm ${f.done ? 'border-slate-100 bg-slate-50 text-slate-400' : overdue ? 'border-red-200 bg-red-50' : 'border-slate-200'}`}>
+                <div className="flex items-center gap-2">
+                  <span>{f.done ? '✅' : overdue ? '🔴' : '⏰'}</span>
+                  <span className={f.done ? 'line-through' : ''}>{f.note || 'מעקב'}</span>
+                  <span className="text-xs text-slate-400">{f.due_date}</span>
+                </div>
+                <div className="flex gap-2">
+                  {!f.done && <button className="text-green-700 hover:underline" onClick={() => doneFu.mutate(f.id)}>בוצע</button>}
+                  <button className="text-red-600 hover:underline" onClick={() => delFu.mutate(f.id)}>מחק</button>
+                </div>
+              </div>
+            );
+          })}
+          {followUps.length === 0 && <p className="text-sm text-slate-400">אין תזכורות</p>}
+        </div>
       </div>
 
       <div className="card">
